@@ -180,6 +180,11 @@ USER_PROGS=\
 	wc\
 	zombie\
 	lotteryschedtest\
+	touch\
+	shutdown\
+	favnum\
+	syscount\
+	killrandom\
 
 UPROGS := $(addprefix fs/,$(USER_PROGS))
 
