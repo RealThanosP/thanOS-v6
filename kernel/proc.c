@@ -477,7 +477,7 @@ static unsigned int rand_state = 123456789;
 // Generates a 32-bit pseudo-random unsigned integer
 unsigned int rand(int seed)
 {
-  unsigned int x = seed + rand_state;
+  unsigned int x = seed ^ rand_state;
   x ^= x << 13;
   x ^= x >> 17;
   x ^= x << 5;
