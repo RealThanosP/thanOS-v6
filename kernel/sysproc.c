@@ -168,7 +168,7 @@ int sys_killrandom(void)
 
   // 3. Pick a random candidate
   // modulo count makes sure the idx is within range of how many processes we have
-  int chosen_idx = (int)(rand(ticks) % (unsigned int)count);
+  int chosen_idx = (int)(rand() % (unsigned int)count);
   struct proc *victim = candidates[chosen_idx];
 
   release(&ptable.lock);
@@ -177,4 +177,10 @@ int sys_killrandom(void)
   kill(victim->pid); // no need to know if it was successful or not
 
   return victim->pid;
+}
+
+// System call wrapper to return a pseudo-random positive integer
+int sys_rand(void)
+{
+  return (int)(rand() & 0x7FFFFFFF);
 }

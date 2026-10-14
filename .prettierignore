@@ -1,0 +1,9 @@
+*.img
+*.o
+*.d
+*.asm
+*.sym
+fs/
+kobj/
+uobj/
+out/

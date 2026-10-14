@@ -186,6 +186,7 @@ USER_PROGS=\
 	syscount\
 	killrandom\
 	clear\
+	randnum\
 
 UPROGS := $(addprefix fs/,$(USER_PROGS))
 

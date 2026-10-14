@@ -123,4 +123,4 @@ struct ptable
   struct proc proc[NPROC];
 };
 
-unsigned int rand(int);
+unsigned int rand(void);

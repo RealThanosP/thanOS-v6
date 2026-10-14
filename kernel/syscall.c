@@ -147,6 +147,7 @@ extern int sys_halt(void);
 extern int sys_favnum(void);
 extern int sys_getcount(void);
 extern int sys_killrandom(void);
+extern int sys_rand(void);
 
 static int (*syscalls[])(void) = {
     [SYS_fork] sys_fork,
@@ -176,6 +177,7 @@ static int (*syscalls[])(void) = {
     [SYS_favnum] sys_favnum,
     [SYS_getcount] sys_getcount,
     [SYS_killrandom] sys_killrandom,
+    [SYS_rand] sys_rand,
 };
 
 int syscall_counts[NELEM(syscalls)] = {0};

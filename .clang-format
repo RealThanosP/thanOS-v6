@@ -1,0 +1,43 @@
+---
+# xv6 Kernel C formatting style
+# Adheres to xv6's BSD/K&R style (2-space indent, no tabs, function braces on new line)
+BasedOnStyle: LLVM
+Language: Cpp
+
+# Indentation: 2 spaces, spaces only (matching .dir-locals.el)
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+ColumnLimit: 80
+
+# Function & struct bracing:
+# Braces {} placed under the declaration of the function / struct
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterStruct: true
+  AfterEnum: true
+  AfterUnion: true
+  AfterClass: true
+  AfterControlStatement: Never
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+
+# Return types and short blocks
+BreakAfterReturnType: None
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Pointer alignment (e.g., struct proc *p, char *buf)
+PointerAlignment: Right
+
+# Critical for xv6: preserve exact #include order
+SortIncludes: Never
+
+# Spacing rules
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: false
+SpacesInContainerLiterals: false

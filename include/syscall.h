@@ -26,3 +26,4 @@
 #define SYS_favnum 29
 #define SYS_getcount 30
 #define SYS_killrandom 31
+#define SYS_rand 32

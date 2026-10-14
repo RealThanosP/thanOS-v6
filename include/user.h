@@ -30,6 +30,7 @@ int favnum(void);
 int getcount(int);
 int killrandom(void);
 int clear(void);
+int rand(void);
 
 // ulib.c
 int stat(char *, struct stat *);
