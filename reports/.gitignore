@@ -6,3 +6,4 @@ build/
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+/report-*/**/*.md

@@ -1,12 +1,12 @@
 \documentclass[11pt,a4paper]{article}
 
 \usepackage{geometry}
-\geometry{a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm}
+\geometry{a4paper, top=1.8cm, bottom=1.8cm, left=2.0cm, right=2.0cm}
 
 \usepackage{fontspec}
 \setmainfont{DejaVu Serif}
 \setsansfont{DejaVu Sans}
-\setmonofont{DejaVu Sans Mono}[Scale=0.90]
+\setmonofont{DejaVu Sans Mono}[Scale=0.87]
 
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
@@ -28,9 +28,11 @@
     linkcolor=blue!75!black,
     urlcolor=teal!70!black,
     citecolor=blue!75!black,
-    pdfauthor={Θάνος},
+    pdfauthor={Παναγόπουλος Αθανάσιος},
     pdftitle={Λειτουργικά Συστήματα - Δραστηριότητα 1: Εισαγωγή στον Πυρήνα xv6}
 }
+
+\emergencystretch=3em
 
 % --- Listing Styles ---
 \definecolor{codebg}{rgb}{0.97,0.97,0.97}
@@ -58,7 +60,8 @@
     showtabs=false,
     tabsize=4,
     frame=single,
-    rulecolor=\color{codeborder}
+    aboveskip=3pt,
+    belowskip=2pt
 }
 
 \lstdefinestyle{termstyle}{
@@ -67,24 +70,15 @@
     breaklines=true,
     frame=single,
     rulecolor=\color{black},
-    numbers=none
+    numbers=none,
+    aboveskip=3pt,
+    belowskip=2pt
 }
 
 \lstset{style=cstyle}
 
-% --- Problem Prompt Box ---
-\newtcolorbox{promptbox}[1][]{
-    colback=blue!3!white,
-    colframe=blue!40!black,
-    fonttitle=\bfseries,
-    coltitle=white,
-    title=Εκφώνηση,
-    arc=1mm,
-    boxrule=0.6pt,
-    left=3mm, right=3mm, top=2mm, bottom=2mm,
-    breakable,
-    #1
-}
+\usepackage{enumitem}
+\setlist{topsep=1.5pt, itemsep=1pt, parsep=0pt}
 
 % --- Header / Footer ---
 \pagestyle{fancy}
@@ -105,9 +99,9 @@
     {\LARGE \textbf{Δραστηριότητα 1: Εισαγωγή στον Πυρήνα xv6 \& System Calls}}\\[2mm]
     \rule{\textwidth}{0.8pt}\\[3mm]
     \begin{tabular}{ll}
-        \textbf{Φοιτητής:} & [Παναγόπουλος Αθανάσιος] \\
-        \textbf{Αριθμός Μητρώου (ΑΜ):} & [1107645] \\
-        \textbf{Ημερομηνία:} & \today \\
+        \textbf{Φοιτητής:} & Παναγόπουλος Αθανάσιος \\
+        \textbf{Αριθμός Μητρώου (ΑΜ):} & 1107645 \\
+        \textbf{Ημερομηνία:} & 14 Οκτωβρίου 2026 \\
         \textbf{Repository:} & \url{https://github.com/RealThanosP/thanOS-v6} \\
     \end{tabular}
 \end{center}
@@ -117,53 +111,48 @@
 % ==============================================================================
 % ΑΣΚΗΣΗ 1
 % ==============================================================================
-\section{Άσκηση 1: Εντοπισμός System Calls \& Ανάλυση Προγράμματος Χρήστη}
+\section[Άσκηση 1: System Calls \& Πρόγραμμα Χρήστη]{Εντοπισμός System Calls \& Ανάλυση Προγράμματος Χρήστη}
 
-
-\begin{promptbox}
-Βρείτε το αρχείο στον πηγαίο κώδικα του xv6 όπου ορίζονται οι κλήσεις συστήματος οι οποίες θα
-είναι διαθέσιμες σε προγράμματα χρήστη. Έπειτα, διαλέξτε ένα από τα προγράμματα χρήστη στον
-φάκελο \texttt{user}. Εξηγήστε τη λειτουργία του κάνοντας συγκεκριμένες αναφορές στα system calls που
-καλεί.
-\end{promptbox}
-
-\subsection*{1Α. Αρχεία Ορισμού Κλήσεων Συστήματος}
+\subsection*{1. Αρχεία Ορισμού Κλήσεων Συστήματος}
 
 Στον πηγαίο κώδικα του xv6, ο ορισμός και η διεπαφή (interface) των κλήσεων συστήματος (system calls) για τα προγράμματα χρήστη κατανέμονται σε τρία βασικά αρχεία:
 
-\begin{itemize}\setlength{\itemsep}{1pt}\setlength{\parskip}{1pt}
-    \item \textbf{\texttt{include/user.h}}: Περιέχει τις δηλώσεις των συναρτήσεων (function prototypes) των διαθέσιμων κλήσεων συστήματος για το user space (π.χ. \texttt{int open(const char*, int)}, \texttt{int read(int, void*, int)}, \texttt{int write(int, const void*, int)}, \texttt{int close(int)}, \texttt{int exit(void)}, κ.λπ.). Με τον τρόπο αυτό, ο μεταγλωττιστής γνωρίζει τους τύπους ορισμάτων και επιστροφής κατά τη συγγραφή προγραμμάτων χρήστη.
+\begin{itemize}
+    \item \textbf{\texttt{include/user.h}}: Περιέχει τις δηλώσεις των συναρτήσεων των διαθέσιμων κλήσεων συστήματος για το user space (π.χ. \texttt{int open(const char*, int)}, \texttt{int read(int, void*, int)}, \texttt{int write(int, const void*, int)}, \texttt{int close(int)}, \texttt{int exit(void)}, κ.λπ.). Με τον τρόπο αυτό, ο compiler γνωρίζει τους τύπους ορισμάτων και επιστροφής κατά τη συγγραφή προγραμμάτων χρήστη.
     
-    \item \textbf{\texttt{include/syscall.h}}: Ορίζει τους αριθμητικούς κωδικούς (system call numbers) μέσω macros του προεπεξεργαστή (π.χ. \texttt{\#define SYS\_open 15}, \texttt{\#define SYS\_read 5}, \texttt{\#define SYS\_write 16}, \texttt{\#define SYS\_close 21}, \texttt{\#define SYS\_exit 2}). Οι κωδικοί αυτοί χρησιμοποιούνται τόσο από το user space για την επιλογή της κλήσης, όσο και από τον πυρήνα για την ανάκτηση της κατάλληλης συνάρτησης χειρισμού από τον πίνακα δεικτών \texttt{syscalls[]}.
+    \item \textbf{\texttt{include/syscall.h}}: Ορίζει τα system call numbers (π.χ. \texttt{\#define SYS\_open 15}, \texttt{\#define SYS\_read 5}). 
+    Οι κωδικοί αυτοί χρησιμοποιούνται τόσο από το user space για την επιλογή της κλήσης, 
+    όσο και από τον πυρήνα για την ανάκτηση της κατάλληλης συνάρτησης χειρισμού από τον πίνακα δεικτών \texttt{syscalls[]}.
     
-    \item \textbf{\texttt{ulib/usys.S}}: Περιέχει τα assembly wrappers (stubs) που εκτελούνται στο user space. Μέσω του macro \texttt{SYSCALL(name)}:
+    \item \textbf{\texttt{ulib/usys.S}}: Περιέχει τα assembly wrappers που εκτελούνται στο user space. 
+    Μέσω του \texttt{SYSCALL(name)}:
+
 \begin{lstlisting}[language=C, aboveskip=2pt, belowskip=2pt, basicstyle=\ttfamily\scriptsize]
 #define SYSCALL(name) \
   .globl name; name: movl $SYS_ ## name, %eax; int $T_SYSCALL; ret
 \end{lstlisting}
-    φορτώνεται ο αντίστοιχος κωδικός στον καταχωρητή \texttt{\%eax} και εκτελείται η διακοπή λογισμικού \texttt{int \$T\_SYSCALL} (\texttt{trap 64}), μεταφέροντας τον έλεγχο από το User Space (Ring 3) στον Πυρήνα (Ring 0).
+    Φορτώνεται ο αντίστοιχος κωδικός στον καταχωρητή \texttt{\%eax} και εκτελείται η διακοπή λογισμικού \texttt{int \$T\_SYSCALL} (\texttt{trap 64}), 
+    μεταφέροντας τον έλεγχο από το User Space (Ring 3) στον Πυρήνα (Ring 0).
 \end{itemize}
 
 \clearpage
-\subsection*{1Β. Επιλογή \& Ανάλυση Προγράμματος Χρήστη (\texttt{user/cat.c})}
 
-Για την ανάλυση επιλέγουμε το πρόγραμμα χρήστη \texttt{cat} (\texttt{user/cat.c}), το οποίο αναλαμβάνει το άνοιγμα ενός ή περισσότερων αρχείων και την εμφάνιση των περιεχομένων τους στο τερματικό.
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
-% Source code of cat.c
+\subsection*{1. Επιλογή \& Ανάλυση Προγράμματος Χρήστη (\texttt{user/cat.c})}
+
+Για την ανάλυση επιλέγεται το πρόγραμμα χρήστη \texttt{cat} (\texttt{user/cat.c}), το οποίο αναλαμβάνει το άνοιγμα ενός 
+ή περισσότερων αρχείων και την εμφάνιση των περιεχομένων τους στην πρότυπη έξοδο (τερματικό).
+
 \subsubsection*{Πηγαίος Κώδικας (\texttt{user/cat.c})}
-\begin{lstlisting}[language=C, caption={Ο πηγαίος κώδικας του προγράμματος cat}]
+\begin{lstlisting}[language=C, caption={Πηγαίος κώδικας του προγράμματος cat (user/cat.c)}]
 #include "types.h"
 #include "stat.h"
 #include "user.h"
 
 char buf[512];
 
-void
-cat(int fd)
-{
+void cat(int fd) {
   int n;
-
   while((n = read(fd, buf, sizeof(buf))) > 0)
     write(1, buf, n);
   if(n < 0){
@@ -172,16 +161,12 @@ cat(int fd)
   }
 }
 
-int
-main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   int fd, i;
-
   if(argc <= 1){
     cat(0);
     exit();
   }
-
   for(i = 1; i < argc; i++){
     if((fd = open(argv[i], 0)) < 0){
       printf(1, "cat: cannot open %s\n", argv[i]);
@@ -193,109 +178,95 @@ main(int argc, char *argv[])
   exit();
 }
 \end{lstlisting}
-% ===============
 
 \clearpage
+\subsubsection*{Ανάλυση Ροής Εκτέλεσης \& Κλήσεων Συστήματος}
 
-\subsubsection*{Ανάλυση Ροής Εκτέλεσης \& System Calls}
-
-\begin{enumerate} 
-    \setlength{\itemsep}{2pt}
-    \setlength{\parskip}{1pt}
-
+\begin{enumerate}
     \item \textbf{Διαχείριση Ορισμάτων \& Είσοδος}:
-    \begin{itemize}\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
-        \item Αν δεν έχουν δοθεί ορίσματα αρχείων στη γραμμή εντολών (\texttt{argc <= 1}), το πρόγραμμα καλεί \texttt{cat(0)}, διαβάζοντας απευθείας από την πρότυπη είσοδο (standard input, file descriptor 0), και έπειτα τερματίζει με \texttt{exit()}.
-        \item Αν δοθούν ονόματα αρχείων (\texttt{argc > 1}), το \texttt{cat} επεξεργάζεται σειριακά κάθε αρχείο \texttt{argv[i]} μέσω ενός βρόχου \texttt{for}.
+    \begin{itemize}
+        \item Εάν δεν δοθούν ορίσματα αρχείων στη γραμμή εντολών (\texttt{argc <= 1}), το πρόγραμμα καλεί τη συνάρτηση \texttt{cat(0)}, 
+        διαβάζοντας απευθείας από την πρότυπη είσοδο (standard input, περιγραφέας αρχείου 0), και στη συνέχεια τερματίζει με 
+        \texttt{exit()}.
+        \item Εάν δοθούν ονόματα αρχείων (\texttt{argc > 1}), το \texttt{cat} επεξεργάζεται διαδοχικά κάθε αρχείο \texttt{argv[i]} 
+        μέσω ενός βρόχου \texttt{for}.
     \end{itemize}
 
     \item \textbf{Άνοιγμα Αρχείου (\texttt{SYS\_open})}:
     \begin{itemize}
-        \item Για κάθε αρχείο εκτελείται η κλήση συστήματος \texttt{open(argv[i], 0)} (\texttt{SYS\_open}, κωδικός 15) με flag ανάγνωσης (\texttt{O\_RDONLY}).
-        \item Εάν η επιστρεφόμενη τιμή είναι αρνητική (\texttt{fd < 0}), σημαίνει ότι το αρχείο δεν μπόρεσε να ανοιχθεί. Το πρόγραμμα τυπώνει μήνυμα σφάλματος και τερματίζει καλώντας \texttt{exit()} (\texttt{SYS\_exit}, κωδικός 2).
+        \item Για κάθε αρχείο εκτελείται η κλήση συστήματος \texttt{open(argv[i], 0)} (\texttt{SYS\_open}, κωδικός 15) με flag ανάγνωσης 
+        (\texttt{O\_RDONLY}).
+        \item Εάν η επιστρεφόμενη τιμή είναι αρνητική (\texttt{fd < 0}), το αρχείο δεν κατέστη δυνατό να ανοιχθεί. 
+        Το πρόγραμμα εκτυπώνει μήνυμα σφάλματος και τερματίζει καλώντας \texttt{exit()} (\texttt{SYS\_exit}, κωδικός 2).
     \end{itemize}
 
     \item \textbf{Ανάγνωση Περιεχομένου (\texttt{SYS\_read})}:
     \begin{itemize}
-        \item Μέσα στη συνάρτηση \texttt{cat(fd)}, εκτελείται επαναληπτικά η κλήση συστήματος \texttt{read(fd, buf, sizeof(buf))} (\texttt{SYS\_read}, κωδικός 5) για να διαβάσει τμήματα δεδομένων μεγέθους έως 512 bytes στον προσωρινό buffer \texttt{buf}.
+        \item Εντός της συνάρτησης \texttt{cat(fd)}, εκτελείται επαναληπτικά η κλήση συστήματος \texttt{read(fd, buf, sizeof(buf))} 
+        (\texttt{SYS\_read}, κωδικός 5) για την ανάγνωση δεδομένων έως 512 bytes στον ενδιάμεσο buffer \texttt{buf}.
         \item Η τιμή επιστροφής \texttt{n} αντιστοιχεί στα πραγματικά bytes που διαβάστηκαν.
     \end{itemize}
 
     \item \textbf{Εγγραφή στην Έξοδο (\texttt{SYS\_write})}:
     \begin{itemize}
-        \item Για όσο \texttt{n > 0}, καλείται η \texttt{write(1, buf, n)} (\texttt{SYS\_write}, κωδικός 16), στέλνοντας τα δεδομένα του buffer στον file descriptor 1 (standard output), που αντιστοιχεί στην οθόνη του τερματικού.
+        \item Για όσο διάστημα \texttt{n > 0}, καλείται η \texttt{write(1, buf, n)} (\texttt{SYS\_write}, κωδικός 16), 
+        αποστέλλοντας τα δεδομένα του buffer στον περιγραφέα αρχείου 1 (standard output), που αντιστοιχεί στο τερματικό.
     \end{itemize}
 
     \item \textbf{Τερματισμός Βρόχου Ανάγνωσης}:
     \begin{itemize}
-        \item Τα βήματα 3 και 4 εκτελούνται διαδοχικά έως ότου η \texttt{read()} επιστρέψει \texttt{0}, γεγονός που σημαίνει ότι επιτεύχθηκε το τέλος του αρχείου (End-Of-File - EOF).
-        \item Αν η \texttt{read()} επιστρέψει αρνητική τιμή (\texttt{n < 0}), έχει συμβεί σφάλμα ανάγνωσης, τυπώνεται σφάλμα και καλείται \texttt{exit()} (\texttt{SYS\_exit}, κωδικός 2).
+        \item Τα βήματα 3 και 4 επαναλαμβάνονται έως ότου η \texttt{read()} επιστρέψει \texttt{0}, 
+        υποδεικνύοντας το τέλος του αρχείου (EOF).
+        \item Εάν η \texttt{read()} επιστρέψει αρνητική τιμή (\texttt{n < 0}), έχει προκύψει σφάλμα ανάγνωσης, τυπώνεται σχετικό 
+        μήνυμα και καλείται \texttt{exit()} (\texttt{SYS\_exit}, κωδικός 2).
     \end{itemize}
 
     \item \textbf{Κλείσιμο Περιγραφέα (\texttt{SYS\_close})}:
     \begin{itemize}
-        \item Μόλις διαβαστεί πλήρως το αρχείο, καλείται η \texttt{close(fd)} (\texttt{SYS\_close}, κωδικός 21), απελευθερώνοντας τον περιγραφέα αρχείου και τους δεσμευμένους πόρους του kernel.
+        \item Μόλις ολοκληρωθεί η ανάγνωση του αρχείου, καλείται η \texttt{close(fd)} (\texttt{SYS\_close}, κωδικός 21), 
+        αποδεσμεύοντας τον περιγραφέα αρχείου και τους σχετικούς πόρους του πυρήνα.
     \end{itemize}
 
     \item \textbf{Τερματισμός Διεργασίας (\texttt{SYS\_exit})}:
     \begin{itemize}
-        \item Αφού ολοκληρωθεί η επεξεργασία όλων των αρχείων, καλείται η \texttt{exit()} (\texttt{SYS\_exit}, κωδικός 2), η οποία τερματίζει τη διεργασία \texttt{cat} και επιστρέφει τον έλεγχο στο shell.
+        \item Αφού ολοκληρωθεί η επεξεργασία όλων των αρχείων, καλείται η \texttt{exit()} (\texttt{SYS\_exit}, κωδικός 2), 
+        η οποία απελευθερώνει τη διεργασία και επιστρέφει τον έλεγχο στο shell.
     \end{itemize}
 \end{enumerate}
-
-\clearpage
 
 
 % ==============================================================================
 % ΑΣΚΗΣΗ 2
 % ==============================================================================
+\clearpage
 \section{Άσκηση 2: Δημιουργία Προγράμματος Χρήστη}
 
-\begin{promptbox}
-Δημιουργήστε ένα πρόγραμμα χρήστη για το xv6.
-Μέσα στο φάκελο \texttt{user}, δημιουργήστε ένα αρχείο με ό,τι όνομα θέλετε. Εκεί, γράψτε ένα πρόγραμμα
-σε γλώσσα C το οποίο θα κάνει κάτι χρήσιμο. Δώστε προσοχή σε ποιες συναρτήσεις έχετε πρόσβαση. Εδώ,
-δεν μπορείτε να χρησιμοποιήσετε τη βασική βιβλιοθήκη της C που ξέρετε αλλά τη βασική βιβλιοθήκη
-που έχει δημιουργηθεί για το xv6 (\texttt{ulib.c}).
-Έπειτα, επεξεργαστείτε κατάλληλα το αρχείο \texttt{Makefile} ώστε να προστεθεί το πρόγραμμα στο image
-του xv6 κατά την κατασκευή του (προσθήκη στη λίστα \texttt{USER\_PROGS}).
-Εκτελέστε \texttt{make qemu} και χρησιμοποιήστε το πρόγραμμα που δημιουργήσατε μέσα στο xv6.
-\end{promptbox}
+\subsection*{2. Περιγραφή \& Σκοπός Προγράμματος}
+Υλοποιήθηκε το πρόγραμμα χρήστη \texttt{touch} (\texttt{user/touch.c}), το οποίο αναλαμβάνει τη δημιουργία νέων κενών αρχείων με δικαιώματα ανάγνωσης και εγγραφής (Read/Write). Εάν το αρχείο προϋπάρχει, ανοίγει κανονικά χωρίς να τροποποιηθεί το περιεχόμενό του. Η σύνταξη της εντολής επιτρέπει τη δημιουργία ενός ή περισσότερων αρχείων ταυτόχρονα: \texttt{touch <file1> [file2 ...]}.
 
-\subsection*{2A. Περιγραφή \& Σκοπός Προγράμματος}
-% TODO: Περιγράψτε το πρόγραμμα που υλοποιήσατε (π.χ. touch) και τον τρόπο χρήσης του.
-Υλοποίησα την εντολή \texttt{touch} η οποία δημιουργεί ένα νέο αρχείο με (Read/Write permissions) με το όνομα που της δίνεται ως όρισμα. Αν το αρχείο υπάρχει ήδη, τότε δέν γίνεται τίποτα. 
-Η χρήση της εντολής είναι απλή: \texttt{touch <filename>}.
-
-\subsection*{2B. Πηγαίος Κώδικας (\texttt{user/touch.c})}
-\begin{lstlisting}[language=C, caption={Υλοποίηση προγράμματος χρήστη}]
+\subsection*{2. Πηγαίος Κώδικας (\texttt{user/touch.c})}
+\begin{lstlisting}[language=C, caption={Υλοποίηση προγράμματος χρήστη touch (user/touch.c)}]
 #include "types.h"
 #include "stat.h"
 #include "user.h"
 #include "fcntl.h"
 
-int touch()
-{
+int touch(void) {
     // Return flags for creating a new file with READ/WRITE permissions
-    // Creates a file if not exists with O_CREATE and gives it read/write access with O_RDWR flag
     return O_CREATE | O_RDWR;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     int fd, i;
 
-    if (argc < 2)
-    {
+    if (argc < 2) {
         printf(2, "Usage: touch file1 file2 ...\n");
         exit();
     }
 
-    for (i = 1; i < argc; i++)
-    {
+    for (i = 1; i < argc; i++) {
         fd = open(argv[i], touch());
-        if (fd < 0)
-        {
+        if (fd < 0) {
             printf(2, "touch: cannot create %s\n", argv[i]);
             exit();
         }
@@ -305,18 +276,20 @@ int main(int argc, char *argv[])
 }
 \end{lstlisting}
 
-\subsection*{2C. Ενσωμάτωση στο \texttt{Makefile}}
-\begin{lstlisting}[language=make, caption={Προσθήκη στη μεταβλητή USER\_PROGS}]
+\clearpage
+\subsection*{2. Ενσωμάτωση στο \texttt{Makefile}}
+Για την ενσωμάτωση του νέου εκτελέσιμου στο αρχικό σύστημα αρχείων (\texttt{fs.img}) του xv6, προστέθηκε το όνομα του προγράμματος στη μεταβλητή \texttt{USER\_PROGS} του \texttt{Makefile}:
+
+\begin{lstlisting}[language=make, caption={Προσθήκη στη μεταβλητή USER\_PROGS του Makefile}]
 USER_PROGS=\
 # ...
 	touch\
 # ...
 \end{lstlisting}
-Εφόσον δεν προσθέσαμε κάποιο νέο αρχείο βιβλιοθήκης ή \texttt{system call}, δεν χρειάστηκε να
-τροποποιήσουμε κάτι άλλο. 
+Καθώς δεν απαιτήθηκε η εισαγωγή νέας βιβλιοθήκης ή νέας κλήσης συστήματος, δεν χρειάστηκαν επιπλέον τροποποιήσεις στο σύστημα δόμησης.
 
-\subsection*{2D. Έλεγχος \& Έξοδος Εκτέλεσης στο QEMU}
-\begin{lstlisting}[style=termstyle, caption={Εκτέλεση στο τερματικό του xv6}]
+\subsection*{2. Έλεγχος \& Έξοδος Εκτέλεσης στο QEMU}
+\begin{lstlisting}[style=termstyle, caption={Εκτέλεση και επαλήθευση της εντολής touch στο τερματικό του xv6}]
 $ touch hello
 $ ls
 .              1 1 512
@@ -346,50 +319,42 @@ syscount       2 23 15016
 killrandom     2 24 14672
 clear          2 25 14608
 console        3 26 0
-hello          2 27 0 // GOOD
+hello          2 27 0
 \end{lstlisting}
 
 
 % ==============================================================================
 % ΑΣΚΗΣΗ 3
 % ==============================================================================
+\clearpage
+
 \section{Άσκηση 3: Ανάλυση της Κλήσης Συστήματος \texttt{uptime}}
 
-\begin{promptbox}
-Αναζητώντας μέσα στον πηγαίο κώδικα του xv6, βρείτε την κλήση συστήματος \texttt{uptime}.
-\begin{enumerate}
-    \item Βρείτε όλα τα σημεία του κώδικα του πυρήνα στα οποία γίνεται αναφορά σε αυτή.
-    \item Εξηγήστε την υλοποίησή της.
-\end{enumerate}
-\end{promptbox}
-
 \subsection*{1. Σημεία Αναφοράς στον Πηγαίο Κώδικα}
-% TODO: Καταγράψτε όλα τα αρχεία και γραμμές (π.χ. syscall.h, syscall.c, sysproc.c, user.h, usys.S).
-Το \texttt{uptime} ορίζεται ως κλήση συστήματος στο kernel του xv6 και η αναφορά της εμφανίζεται στα εξής αρχεία:
+Η κλήση συστήματος \texttt{uptime} δηλώνεται και χρησιμοποιείται στα εξής αρχεία του πηγαίου κώδικα:
 \begin{itemize}
-    \item \texttt{include/syscall.h}: Δηλώνεται ο αριθμός της.
-    \item \texttt{include/user.h}: Δηλώνεται η συνάρτηση που είναι διαθέσιμη για χρήση στο \texttt{user space}.
-    \item \texttt{kernel/syscall.c}: Δηλώνεται η συνάρτησή υλοποίσης της και προστίθεται στην λίστα των διαθέσιμων \texttt{system call} του \texttt{xv6}.
-    \item \texttt{kernel/sysproc.h}: Ορίζεται η συνάρτηση \texttt{sys\_uptime()} που την υλοποιεί.
-    \item \texttt{ulib/usys.S}: Δηλώνεται ώς διαθέσιμο system call στον assembly wrapper.
+    \item \textbf{\texttt{include/syscall.h}}: Ορίζεται ο κωδικός της κλήσης (\texttt{\#define SYS\_uptime 14}).
+    \item \textbf{\texttt{include/user.h}}: Περιλαμβάνει τη δήλωση για το user space (\texttt{int uptime(void);}).
+    \item \textbf{\texttt{ulib/usys.S}}: Περιέχει το assembly stub (\texttt{SYSCALL(uptime)}) που παράγει το trap/interrupt.
+    \item \textbf{\texttt{kernel/syscall.c}}: Δηλώνεται η \texttt{sys\_uptime(void)} και καταχωρίζεται στον πίνακα \texttt{syscalls[]}.
+    \item \textbf{\texttt{kernel/sysproc.c}}: Υλοποιείται η συνάρτηση εξυπηρέτησης \texttt{sys\_uptime(void)} στον πυρήνα.
+    διεργασίες.
 \end{itemize}
 
 \subsection*{2. Ανάλυση Υλοποίησης (\texttt{sys\_uptime})}
-% TODO: Παραθέστε τον κώδικα της συνάρτησης και εξηγήστε:
-% - Τι μετράει η μεταβλητή ticks (hardware timer interrupts).
-% - Γιατί χρησιμοποιείται το lock (tickslock).
-Επιστρέφει τον αριθμό των διακοπών ρολογιού (clock tick interrupts) που έχουν συμβεί από την εκκίνηση του συστήματος. 
-Η μεταβλητή \texttt{ticks} αυξάνεται κάθε φορά που συμβαίνει μια διακοπή ρολογιού (\texttt{kernel/trap.c}).
-Ο λόγος που χρησιμοποιείται το \texttt{tickslock} είναι για να αποφευχθεί η ταυτόχρονη πρόσβαση στη μεταβλητή \texttt{ticks} από πολλαπλά threads ή διεργασίες, εξασφαλίζοντας ότι η ανάγνωση της τιμής της είναι ασφαλής και συνεπής.
-Στην ουσία παγώνουμε τον CPU και εξασφαλίζουμε ότι μόνο η uptime θα έχει πρόσβαση στην \texttt{ticks} για την εκτέλεση.
+Η συνάρτηση \texttt{sys\_uptime()} επιστρέφει το πλήθος των διακοπών του ρολογιού συστήματος (clock tick interrupts) 
+από τη στιγμή εκκίνησης του λειτουργικού συστήματος. 
+
+Η καθολική μεταβλητή \texttt{ticks} αυξάνεται σε κάθε διακοπή χρονιστή στο αρχείο \texttt{kernel/trap.c}.
+
+Η χρήση του μηχανισμού κλειδώματος \texttt{tickslock} είναι απαραίτητη καθώς 
+εξασφαλίζει ότι η ανάγνωση της τιμής της μεταβλητής \texttt{ticks} πραγματοποιείται ατομικά και με συνέπεια, 
+αποτρέποντας συνθήκες ανταγωνισμού.
 
 \begin{lstlisting}[language=C, caption={Υλοποίηση sys\_uptime στο kernel/sysproc.c}]
-// return how many clock tick interrupts have occurred
-// since start.
-int sys_uptime(void)
-{
+// return how many clock tick interrupts have occurred since start.
+int sys_uptime(void) {
   uint xticks;
-
   acquire(&tickslock);
   xticks = ticks;
   release(&tickslock);
@@ -400,149 +365,382 @@ int sys_uptime(void)
 % ==============================================================================
 % ΑΣΚΗΣΗ 4
 % ==============================================================================
+\clearpage
 \section{Άσκηση 4: Ροή Εκτέλεσης System Calls στον Πυρήνα}
 
-\begin{promptbox}
-Βρείτε τη συνάρτηση μέσα στον kernel κώδικα όπου τελικά εκτελούνται οι system calls. Καταγράψτε
-τη σειρά των ενεργειών που γίνονται όταν καλείται ένα system call.
-\end{promptbox}
-
 \subsection*{1. Εντοπισμός Συνάρτησης Εκτέλεσης System Calls}
-% TODO: Αναφορά στο αρχείο kernel/syscall.c και στη συνάρτηση syscall(void).
-H συνάρτηση που εκτελεί όλα τα \texttt{system calls} είναι
+Η κεντρική συνάρτηση αποστολής και εκτέλεσης όλων των κλήσεων συστήματος στον πυρήνα είναι η \texttt{syscall(void)}, 
+η οποία βρίσκεται στο αρχείο \texttt{kernel/syscall.c}.
 
 \subsection*{2. Σειρά Ενεργειών \& Μηχανισμός Εκτέλεσης System Calls}
-% TODO: Εξηγήστε τα βήματα:
-% 1. Πώς μεταβιβάζεται ο αριθμός της κλήσης (μέσω eax στο trap frame).
-% 2. Έλεγχος ορίων (bounds checking).
-% 3. Κλήση της αντίστοιχης συνάρτησης από τον πίνακα δεικτών συναρτήσεων syscalls[].
-% 4. Αποθήκευση της τιμής επιστροφής στο eax.
+
+\begin{lstlisting}[language=C, caption={Υλοποίηση της συνάρτησης syscall στο kernel/syscall.c}]
+void syscall(void) {
+  int num = proc->tf->eax;
+  if (num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    proc->tf->eax = syscalls[num]();
+  } else {
+    cprintf("%d %s: unknown sys call %d\n", proc->pid, proc->name, num);
+    proc->tf->eax = -1;
+  }
+}
+\end{lstlisting}
+
+Η πλήρης ακολουθία ενεργειών κατά την κλήση ενός system call στο xv6 εξελίσσεται ως εξής:
+
+\begin{enumerate}[topsep=1pt, itemsep=0.5pt, parsep=0pt]
+    \item \textbf{Κλήση από το User Space}: Το πρόγραμμα χρήστη καλεί τη συνάρτηση-διεπαφή (π.χ. \texttt{read()}). 
+    Το assembly stub στο \texttt{ulib/usys.S} τοποθετεί τον αριθμό της κλήσης (\texttt{SYS\_read}) στον καταχωρητή \texttt{\%eax} 
+    και εκτελεί τη διακοπή λογισμικού \texttt{int \$T\_SYSCALL} (trap).
+    \item \textbf{Μετάβαση σε Kernel Mode}: Ο επεξεργαστής μεταβαίνει αυτόματα σε Ring 0, αποθηκεύει τους καταχωρητές στη στοίβα 
+    πυρήνα (\texttt{struct trapframe}) και μεταφέρει την εκτέλεση στον γενικό χειριστή \texttt{alltraps} (\texttt{kernel/trapasm.S}).
+    \item \textbf{Δρομολόγηση μέσω της \texttt{trap()}}: Η συνάρτηση \texttt{trap()} (\texttt{kernel/trap.c}) διαπιστώνει ότι πρόκειται 
+    για \texttt{T\_SYSCALL} και καλεί τη συνάρτηση \texttt{syscall()}.
+    \item \textbf{Ανάγνωση Αριθμού Κλήσης}: Η \texttt{syscall()} διαβάζει τον αριθμό της κλήσης από το trap frame της 
+    διεργασίας (\texttt{num = proc->tf->eax}).
+    \item \textbf{Έλεγχος Ορίων (Bounds Checking)}: Επαληθεύεται ότι \texttt{num > 0}, \texttt{num < NELEM(syscalls)} και ότι υπάρχει
+    έγκυρος δείκτης συνάρτησης (\texttt{syscalls[num] != NULL}).
+    \item \textbf{Εκτέλεση \& Αποθήκευση Αποτελέσματος}: Εφόσον ο έλεγχος επιτύχει, καλείται η συνάρτηση του πυρήνα
+    (\texttt{syscalls[num]()}) και η τιμή επιστροφής αποθηκεύεται στο \texttt{proc->tf->eax}.
+    \item \textbf{Διαχείριση Σφάλματος}: Εάν ο αριθμός δεν είναι έγκυρος, εκτυπώνεται μήνυμα σφάλματος μέσω \texttt{cprintf()} 
+    και αποδίδεται \texttt{-1} στον \texttt{\%eax}.
+    \item \textbf{Επιστροφή στο User Space}: Ο πυρήνας εκτελεί την \texttt{trapret}, αποκαθιστά τους καταχωρητές 
+    (με το αποτέλεσμα στον \texttt{\%eax}) και με την \texttt{iret} επιστρέφει στο User Space.
+\end{enumerate}
 
 
 % ==============================================================================
 % ΑΣΚΗΣΗ 5
 % ==============================================================================
+\clearpage
 \section{Άσκηση 5: Προσθήκη System Call (\texttt{getfavnum})}
 
-\begin{promptbox}
-Προσθέστε μία κλήση συστήματος η οποία θα επιστρέφει τον αγαπημένο σας αριθμό. Η κλήση
-που θα φτιάξετε πρέπει να έχει το εξής πρωτότυπο: \texttt{int getfavnum(void)}. Μία τέτοια κλήση δεν
-έχει κανέναν πρακτικό σκοπό αφού δεν εκμεταλλεύεται κάποια πληροφορία ή πόρο που κατέχει το
-λειτουργικό σύστημα. Στόχος εδώ είναι να κατανοήσουμε τον τρόπο με τον οποίο προστίθενται
-κλήσεις συστήματος στο xv6.
-\end{promptbox}
-
 \subsection*{1. Τροποποιήσεις στον Πυρήνα \& User Interface}
-% TODO: Καταγράψτε τα αρχεία που τροποποιήθηκαν:
-% - include/syscall.h
-% - ulib/usys.S
-% - include/user.h
-% - kernel/syscall.c
-% - kernel/sysproc.c
+Σύμφωνα με τις απαιτήσεις της άσκησης υλοποιήθηκε η κλήση συστήματος επιστροφής του αγαπημένου αριθμού. 
+Στο repository \texttt{thanOS-v6} έχει ενσωματωθεί ως \texttt{favnum} (\texttt{getfavnum}), τροποποιώντας τα εξής αρχεία:
+\begin{itemize}
+    \item \textbf{\texttt{include/syscall.h}}: Ορίστηκε ο μοναδικός κωδικός (\texttt{\#define SYS\_favnum 29}).
+    \item \textbf{\texttt{ulib/usys.S}}: Προστέθηκε το assembly wrapper (\texttt{SYSCALL(favnum)}).
+    \item \textbf{\texttt{include/user.h}}: Δηλώθηκε το πρωτότυπο της διεπαφής (\texttt{int favnum(void);}).
+    \item \textbf{\texttt{kernel/syscall.c}}: Δηλώθηκε η \texttt{extern int sys\_favnum(void);} και καταχωρίστηκε στον πίνακα δεικτών 
+    \texttt{syscalls[]}: \texttt{[SYS\_favnum] sys\_favnum}.
+    \item \textbf{\texttt{kernel/sysproc.c}}: Υλοποιήθηκε η συνάρτηση εξυπηρέτησης του πυρήνα:
+\end{itemize}
+
+\begin{lstlisting}[language=C, caption={Η trivial υλοποίηση sys\_favnum στο kernel/sysproc.c}]
+// returns my favourite number
+int sys_favnum(void) {
+  return 42;
+}
+\end{lstlisting}
 
 \subsection*{2. Πρόγραμμα Ελέγχου (\texttt{user/favnum.c})}
-\begin{lstlisting}[language=C, caption={Πρόγραμμα δοκιμής favnum}]
-// TODO: Κώδικας προγράμματος χρήστη
+Στον φάκελο \texttt{user/} δημιουργήθηκε το βοηθητικό πρόγραμμα χρήστη \texttt{favnum.c}:
+
+\begin{lstlisting}[language=C, caption={Πρόγραμμα δοκιμής favnum (user/favnum.c)}]
+#include "types.h"
+#include "stat.h"
+#include "user.h"
+
+int main(int argc, char *argv[]) {
+    printf(1, "%d\n", favnum());
+    exit();
+}
 \end{lstlisting}
 
 \subsection*{3. Αποτελέσματα Εκτέλεσης}
-\begin{lstlisting}[style=termstyle]
-$ # TODO: Logs εκτέλεσης
+\begin{lstlisting}[style=termstyle, caption={Εκτέλεση της εντολής favnum στο τερματικό του xv6}]
+$ favnum
+42
 \end{lstlisting}
+This is the meaning of life?
 
 
 % ==============================================================================
 % ΑΣΚΗΣΗ 6
 % ==============================================================================
+\clearpage
 \section{Άσκηση 6: System Call Τερματισμού (\texttt{halt} / \texttt{shutdown})}
 
-\begin{promptbox}
-Προσθέστε μία κλήση συστήματος η οποία θα εκτελεί λειτουργία «shutdown». Η κλήση που θα
-φτιάξετε πρέπει να έχει το εξής πρωτότυπο: \texttt{void halt(void)}. Έπειτα, φτιάξτε ένα πρόγραμμα
-χρήστη με όνομα \texttt{shutdown} το οποίο θα καλεί την κλήση συστήματος που φτιάξατε, ώστε χρήστες
-του xv6 να μπορούν πλέον να κάνουν shutdown το σύστημα χωρίς να χρειάζεται να το κάνουν από
-το host μηχάνημα.
-
-Σε αυτή τη κλήση συστήματος θα πρέπει να επικοινωνήσετε άμεσα με το hardware της εικονικής
-μηχανής (στην περίπτωσή μας το QEMU). Για την απενεργοποίηση του συστήματος το hardware περιμένει
-σε κάποια συγκεκριμένη διεύθυνση (port) να υπάρξει μία συγκεκριμένη τιμή. Εξηγήστε τη λειτουργία
-της συνάρτησης \texttt{outw} την οποία θα χρησιμοποιήσετε.
-\end{promptbox}
-
 \subsection*{1. Ανάλυση της Συνάρτησης \texttt{outw} \& Port I/O}
-% TODO: Εξηγήστε:
-% - Port-mapped I/O (x86 in/out εντολές) vs Memory-mapped I/O.
-% - Προνομιακές εντολές (Ring 0 vs Ring 3 / GP Fault).
-% - ACPI I/O Ports και magic values (0x604, 0x2000 / PM1a_CNT).
+Για να επιτευχθεί ο τερματισμός της εικονικής μηχανής και η επιστροφή στο host σύστημα, απαιτείται άμεση επικοινωνία με το υλικό του QEMU. 
+Το xv6 δεν παρέχει εξ ορισμού μηχανισμό τερματισμού (power-off), επομένως υλοποιήθηκε η νέα κλήση \texttt{halt}.
 
-\subsection*{2. Υλοποίηση Κλήσης Συστήματος (\texttt{kernel/sysproc.c})}
-\begin{lstlisting}[language=C, caption={Υλοποίηση sys\_halt}]
-// TODO: Κώδικας sys_halt
+\paragraph{Υλοποίηση της \texttt{outw} (\texttt{include/x86.h}):}
+Η επικοινωνία με τις θύρες I/O γίνεται μέσω της \texttt{outw}:
+
+\begin{lstlisting}[language=C, caption={Υλοποίηση της outw στο include/x86.h}]
+static inline void outw(ushort port, ushort data) {
+  asm volatile("out %0,%1" : : "a" (data), "d" (port));
+}
+\end{lstlisting}
+
+\paragraph{Λειτουργία \& Επίπεδο Προνομίων CPU:}
+\begin{itemize}
+    \item \textbf{Port-Mapped I/O (PMIO)}: Στην αρχιτεκτονική x86 υφίσταται διακριτός χώρος διευθύνσεων I/O (Port-Mapped I/O), ανεξάρτητος από τη RAM, 
+    προσπελάσιμος αποκλειστικά μέσω των assembly εντολών \texttt{in} και \texttt{out}.
+    \item \textbf{Καταχωρητές \& Inline Assembly}: Το όρισμα \texttt{data} (16-bit word) δεσμεύεται στον καταχωρητή \texttt{\%ax} 
+    (constraint \texttt{"a"}) και το \texttt{port} στον \texttt{\%dx} (constraint \texttt{"d"}). 
+    Η assembly εντολή \texttt{out \%ax, \%dx} αποστέλλει τα 16 bits της τιμής στη δηλωθείσα θύρα I/O.
+    \item \textbf{Προνομιακές Εντολές}: Οι εντολές \texttt{in} και \texttt{out} επιτρέπεται να εκτελεστούν αποκλειστικά όταν το επίπεδο προνομίων (CPL) βρίσκεται σε Kernel Mode (Ring 0). 
+    Εάν εκτελεστούν σε User Mode (Ring 3), ο επεξεργαστής παράγει άμεσα εξαίρεση γενικής προστασίας (\textbf{General Protection Fault - \texttt{\#GP}}).
+\end{itemize}
+
+\paragraph{Διευθύνσεις Θυρών (Ports) \& Magic Values (ACPI):}
+\begin{itemize}
+    \item \textbf{Port \texttt{0x604} (QEMU ACPI)}: Στο chipset PIIX4 του QEMU, η βάση του ACPI I/O space ορίζεται στη διεύθυνση \texttt{0x600}. 
+    Η θύρα στο offset \texttt{+0x04} (\texttt{0x604}) αντιστοιχεί στον καταχωρητή ελέγχου \textbf{\texttt{PM1a\_CNT}} (\textit{Power Management 1 Control Register}).
+    \item \textbf{Τιμή \texttt{0x2000} (\texttt{SLP\_EN})}: Σύμφωνα με τις προδιαγραφές ACPI, το \textbf{bit 13} αποτελεί τη σημαία \texttt{SLP\_EN} (\textit{Sleep Enable}), 
+    ενώ τα \textbf{bits 10--12} (\texttt{SLP\_TYP}) με τιμή \texttt{000} σηματοδοτούν την κατάσταση πλήρους τερματισμού \texttt{S5} (\textit{Soft-Off}). 
+    Η εγγραφή του \texttt{0x2000} (\texttt{0010\_0000\_0000\_0000}$_2$) στον \texttt{PM1a\_CNT} δίνει εντολή στο ACPI του QEMU να κλείσει την εικονική μηχανή.
+    \item \textbf{Port \texttt{0xB004}}: Χρησιμοποιείται ως fallback διεύθυνση ACPI για παλαιότερες εκδόσεις του QEMU, που έτυχε να χρησιμοποιώ.
+\end{itemize}
+
+\clearpage
+\subsection*{2. Υλοποίηση Κλήσης Συστήματος (\texttt{sys\_halt})}
+Για την πλήρη ένταξη της κλήσης συστήματος \texttt{halt} στο λειτουργικό σύστημα, τροποποιήθηκαν τα εξής αρχεία:
+\begin{itemize}
+    \item \textbf{\texttt{include/syscall.h}}: Ορισμός κωδικού κλήσης (\texttt{\#define SYS\_halt 28}).
+    \item \textbf{\texttt{include/user.h}}: Δήλωση πρωτοτύπου χρήστη (\texttt{void halt(void);}).
+    \item \textbf{\texttt{ulib/usys.S}}: Προσθήκη assembly stub (\texttt{SYSCALL(halt)}).
+    \item \textbf{\texttt{kernel/syscall.c}}: Δήλωση \texttt{extern int sys\_halt(void);} και καταχώριση στον πίνακα \texttt{syscalls[]}: \texttt{[SYS\_halt] sys\_halt}.
+    \item \textbf{\texttt{kernel/sysproc.c}}: Υλοποίηση της συνάρτησης εξυπηρέτησης του πυρήνα:
+\end{itemize}
+
+\begin{lstlisting}[language=C, caption={Υλοποίηση sys\_halt στο kernel/sysproc.c}]
+// Shutdown xv6
+int sys_halt(void) {
+  // QEMU uses port 0x604 for ACPI power-off
+  outw(0x604, 0x2000);
+  // Fallback for older QEMU versions
+  outw(0xB004, 0x2000);
+  return 0;
+}
 \end{lstlisting}
 
 \subsection*{3. Πρόγραμμα Χρήστη \texttt{shutdown} \& Επαλήθευση}
-\begin{lstlisting}[language=C, caption={user/shutdown.c}]
-// TODO: Κώδικας shutdown.c
+Στον κατάλογο \texttt{user/} δημιουργήθηκε το πρόγραμμα χρήστη \texttt{shutdown.c}:
+
+\begin{lstlisting}[language=C, caption={Πρόγραμμα χρήστη shutdown (user/shutdown.c)}]
+#include "types.h"
+#include "stat.h"
+#include "user.h"
+
+int main(int argc, char *argv[]) {
+    printf(1, "Shutting down xv6... Goodbye!\n");
+    halt();
+    exit(); // We should never reach this state
+}
 \end{lstlisting}
 
+Προστέθηκε στη λίστα \texttt{USER\_PROGS} του \texttt{Makefile} (\texttt{shutdown\textbackslash}) και εκτελέστηκε στο shell του xv6:
 
+\begin{lstlisting}[style=termstyle, caption={Εκτέλεση της εντολής shutdown}]
+$ shutdown
+Shutting down xv6... Goodbye!
+\end{lstlisting}
+Με την εκτέλεση της \texttt{halt()}, το QEMU τερματίζει ακαριαία και ομαλά, επιστρέφοντας τον έλεγχο στο host σύστημα.
+
+%! YOU have reviewed up to here %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ==============================================================================
 % ΑΣΚΗΣΗ 7
 % ==============================================================================
-\section{Άσκηση 7: Καταμέτρηση Κλήσεων Συστήματος (\texttt{getcount})}
-
-\begin{promptbox}
-Προσθέστε μία κλήση συστήματος η οποία θα επιστρέφει το πόσες φορές έχει εκτελεστεί μία
-συγκεκριμένη κλήση συστήματος η οποία θα περνιέται σαν όρισμα. Η κλήση που θα φτιάξετε πρέπει
-να έχει το εξής πρωτότυπο: \texttt{int getcount(int syscall)}.
-\end{promptbox}
+\clearpage
+\section{Άσκηση 7: Καταμέτρηση Κλήσεων (\texttt{getcount})}
 
 \subsection*{1. Αρχιτεκτονική Καταμέτρησης στον Πυρήνα}
-% TODO: Περιγράψτε:
-% - Πίνακας καταμέτρησης στο kernel/syscall.c
-% - Πού και πώς αυξάνεται ο μετρητής (μέσα στη συνάρτηση syscall())
-% - Έλεγχος εγκυρότητας του ορίσματος syscall
+Για την καταμέτρηση των εκτελέσεων κάθε κλήσης συστήματος, δηλώθηκε στον πυρήνα (\texttt{kernel/syscall.c}) 
+ο καθολικός πίνακας \texttt{syscall\_counts[NELEM(syscalls)]}, με αρχικοποίηση όλων των στοιχείων στο μηδέν. 
 
-\subsection*{2. Υλοποίηση \texttt{sys\_getcount}}
+Μέσα στην κεντρική συνάρτηση \texttt{syscall(void)}, μετά την επιτυχή εκτέλεση της εκάστοτε κλήσης, αυξάνεται 
+ο αντίστοιχος μετρητής: \texttt{syscall\_counts[num]++}.
+
+\subsection*{2. Υλοποίηση \texttt{sys\_getcount} (\texttt{kernel/syscall.c})}
+Η συνάρτηση εξυπηρέτησης ανακτά το πρώτο όρισμα (\texttt{argint}), ελέγχει τα όρια και επιστρέφει τον μετρητή:
 \begin{lstlisting}[language=C, caption={Υλοποίηση sys\_getcount στο kernel/syscall.c}]
-// TODO: Κώδικας sys_getcount
+int sys_getcount(void) {
+  int sc;
+  if (argint(0, &sc) < 0 || sc < 0 || sc >= NELEM(syscalls)) return -1;
+  return syscall_counts[sc];
+}
 \end{lstlisting}
 
-\subsection*{3. Πρόγραμμα Ελέγχου \& Πειραματική Επαλήθευση}
-\begin{lstlisting}[style=termstyle, caption={Δοκιμές καταμέτρησης}]
-$ # TODO: Terminal logs δοκιμών
+\subsection*{3. Πρόγραμμα Χρήστη (\texttt{user/syscount.c})}
+\begin{lstlisting}[language=C, caption={Πρόγραμμα χρήστη syscount (user/syscount.c)}]
+#include "types.h"
+#include "user.h"
+
+int main(int argc, char *argv[]) {
+  if (argc != 2) { printf(2, "Usage: %s <syscall_num>\n", argv[0]); exit(); }
+  int num = atoi(argv[1]);
+  int count = getcount(num);
+  if (count < 0) { printf(2, "syscount: invalid syscall %d\n", num); exit(); }
+  printf(1, "System call %d execution count: %d\n", num, count);
+  exit();
+}
 \end{lstlisting}
+
+\subsection*{4. Πειραματική Επαλήθευση \& Αποτελέσματα}
+\begin{lstlisting}[style=termstyle, caption={Δοκιμές καταμέτρησης με το διαγνωστικό πρόγραμμα forktest}]
+$ forktest
+fork test
+fork test OK
+$ syscount 1
+System call 1 execution count: 65
+\end{lstlisting}
+Με όριο 64 διεργασιών και ήδη ενεργές τις init, shell και forktest, το forktest δημιουργεί 61 παιδιά και πραγματοποιεί μία επιπλέον αποτυχημένη κλήση fork(). 
+Ο καθολικός μετρητής περιλαμβάνει επίσης τη δημιουργία του shell από την init και την εκκίνηση των forktest και syscount από το shell. 
+Έτσι, σε καθαρή εκκίνηση χωρίς άλλες διεργασίες ή προηγούμενες κλήσεις fork(), προκύπτουν συνολικά 65 κλήσεις,  
+61 (από το fork test) και 4 (από τα fork που καλούν οι sh, forktest, syscount και init).
 
 
 % ==============================================================================
 % ΑΣΚΗΣΗ 8
 % ==============================================================================
-\section{Άσκηση 8: Τυχαίος Τερματισμός Διεργασίας (\texttt{killrandom})}
+\clearpage
+\section{Άσκηση 8: Τυχαίος Τερματισμός (\texttt{killrandom})}
 
-\begin{promptbox}
-Προσθέστε μία κλήση συστήματος η οποία θα τερματίζει μια τυχαία διεργασία με πρότυπο
-\texttt{int killrandom(void)}.
-Θα χρειαστεί να προσθέσετε μία γεννήτρια τυχαίων αριθμών στο kernel. Πώς μπορείτε να βρείτε
-τα PID όλων των τρέχοντων διεργασιών στο σύστημα;
-\end{promptbox}
 
-\subsection*{1. Γεννήτρια Ψευδοτυχαίων Αριθμών (PRNG) στον Πυρήνα}
-% TODO: Περιγράψτε τον αλγόριθμο PRNG (π.χ. Xorshift32 με βάση τα ticks) και την υλοποίησή του.
+\subsection*{1. Γεννήτρια Ψευδοτυχαίων Αριθμών στον Πυρήνα}
+Για την παραγωγή ψευδοτυχαίων αριθμών εντός του πυρήνα υλοποιήθηκε μια γεννήτρια βασισμένη στον αλγόριθμο \textbf{Xorshift32} (\texttt{kernel/proc.c}). 
+Ο αλγόριθμος εκτελεί διαδοχικές πράξεις bitwise shift και XOR πάνω σε μια εσωτερική κατάσταση (\texttt{rand\_state}), παράγοντας ψευδοτυχαίους αριθμούς 32-bit.
 
-\subsection*{2. Ανάκτηση PID \& Προστασία Κρίσιμων Διεργασιών}
-% TODO: Εξηγήστε:
-% - Πώς διατρέχεται ο πίνακας διεργασιών (ptable.proc)
-% - Πώς προστατεύεται η διεργασία init (PID 1) και η τρέχουσα διεργασία (proc)
-% - Συγχρονισμός με ptable.lock
-
-\subsection*{3. Υλοποίηση \texttt{sys\_killrandom}}
-\begin{lstlisting}[language=C, caption={Υλοποίηση sys\_killrandom στο kernel/sysproc.c}]
-// TODO: Κώδικας sys_killrandom
+\begin{lstlisting}[language=C, caption={Υλοποίηση του αλγορίθμου Xorshift32 στο kernel/proc.c}]
+// Generates a 32-bit pseudo-random unsigned integer
+unsigned int rand(void) {
+  unsigned int x = rand_state;
+  x ^= x << 13;
+  x ^= x >> 17;
+  x ^= x << 5;
+  rand_state = x;
+  return x;
+}
 \end{lstlisting}
 
-\subsection*{4. Πρόγραμμα Χρήστη \& Δοκιμή}
-\begin{lstlisting}[style=termstyle]
-$ # TODO: Logs τερματισμού τυχαίων διεργασιών
+\subsection*{2. Ανάκτηση PID, Συγχρονισμός \& Προστασία Κρίσιμων Διεργασιών}
+Κατά τον σχεδιασμό της κλήσης συστήματος \texttt{sys\_killrandom()}, τηρούνται αυστηρά κριτήρια ασφαλείας και ορθού συγχρονισμού:
+
+\begin{itemize}
+    \item \textbf{Προστασία κρίσιμων διεργασιών}: Εξαιρείται ρητά η αρχική διεργασία \texttt{init} (\texttt{PID 1}), καθώς ο τερματισμός της οδηγεί σε κατάρρευση (\textit{kernel panic}), 
+    καθώς και η ίδια η τρέχουσα διεργασία (\texttt{proc}), αποτρέποντας ακούσιο αυτοτερματισμό.
+    \item \textbf{Συγχρονισμός και αποφυγή ανταγωνισμού}: Πριν από οποιαδήποτε ανάγνωση του πίνακα \texttt{ptable.proc}, αποκτάται το κλείδωμα \texttt{ptable.lock}. 
+    \item \textbf{Συλλογή υποψήφιων διεργασιών}: Διατρέχεται ο πίνακας \texttt{ptable.proc} και συλλέγονται σε πίνακα δεικτών \texttt{candidates[]} αποκλειστικά οι ζωντανές διεργασίες (αποκλείοντας καταστάσεις \texttt{UNUSED} ή \texttt{ZOMBIE}).
+    \item \textbf{Τυχαία επιλογή και τερματισμός}: Εφόσον \texttt{count > 0}, επιλέγεται μία διεργασία τυχαία (\texttt{rand() \% count}). Απελευθερώνεται το κλείδωμα και καλείται η \texttt{kill(victim->pid)}. Αν δεν υπάρχει υποψήφια διεργασία, επιστρέφεται \texttt{-1}.
+\end{itemize}
+
+\clearpage
+\subsection*{3. Υλοποίηση Κλήσης Συστήματος (\texttt{sys\_killrandom})}
+\begin{lstlisting}[language=C, caption={Υλοποίηση sys\_killrandom στο kernel/sysproc.c}]
+int sys_killrandom(void) {
+  struct proc *candidates[NPROC], *p;
+  int count = 0;
+
+  acquire(&ptable.lock);
+  // 1. Συλλογή ζωντανών διεργασιών (εξαίρεση init και τρέχουσας)
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state == UNUSED || p->state == ZOMBIE) continue;
+    if (p->pid <= 1 || p == proc) continue;
+    candidates[count++] = p;
+  }
+  if (count == 0) {
+    release(&ptable.lock);
+    return -1;
+  }
+  // 2. Τυχαία επιλογή υποψήφιας διεργασίας
+  int chosen_idx = (int)(rand() % (unsigned int)count);
+  struct proc *victim = candidates[chosen_idx];
+  release(&ptable.lock);
+
+  // 3. Τερματισμός επιλεγμένης διεργασίας
+  kill(victim->pid);
+  return victim->pid;
+}
+\end{lstlisting}
+
+\subsection*{4. Πρόγραμμα Χρήστη (\texttt{user/killrandom.c}) \& Πειραματική Επαλήθευση}
+\begin{lstlisting}[language=C, caption={Πρόγραμμα χρήστη killrandom (user/killrandom.c)}]
+#include "types.h"
+#include "user.h"
+
+int main(int argc, char **argv) {
+  printf(1, "Killed pid %d\n", killrandom());
+  exit();
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=termstyle, caption={Δοκιμές τυχαίου τερματισμού διεργασιών στο τερματικό του xv6}]
+$ sh &
+$ sh &
+$ killrandom
+Killed pid 4
+zombie!
+$ killrandom
+Killed pid 2
+init: starting sh
+$ killrandom
+Killed pid 6
+zombie!
+\end{lstlisting}
+
+Οι background διεργασίες (\texttt{sh \&}) υιοθετούνται από την \texttt{init} και όταν τερματίζονται, 
+η \texttt{wait()} τις περισυλλέγει και η \texttt{init} τυπώνει \texttt{zombie!} (\texttt{wpid != pid}).
+
+\noindent\begin{minipage}{\linewidth}
+Στο \texttt{user/sh.c}, η περίπτωση \texttt{BACK} δημιουργεί τη background διεργασία με
+\texttt{fork1()}, χωρίς να περιμένει τον τερματισμό της. Η ενδιάμεση διεργασία που
+χειρίζεται την εντολή τερματίζεται με την \texttt{exit()} μετά το \texttt{switch}:
+\begin{lstlisting}[language=C, caption={Απόσπασμα της runcmd στο user/sh.c}]
+  case BACK:
+    bcmd = (struct backcmd*)cmd;
+    if(fork1() == 0)
+      runcmd(bcmd->cmd);
+    break;
+  }
+  exit();
+\end{lstlisting}
+\end{minipage}
+
+Όταν τερματίζεται ο γονέας, η \texttt{exit()} του πυρήνα αναθέτει τα παιδιά του στην
+\texttt{init}. Έτσι εξηγείται η υιοθεσία των background διεργασιών:
+\begin{lstlisting}[language=C, caption={Υιοθεσία ορφανών διεργασιών στην exit του kernel/proc.c}]
+  // Pass abandoned children to init.
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->parent == proc)
+    {
+      p->parent = initproc;
+      if (p->state == ZOMBIE)
+        wakeup1(initproc);
+    }
+  }
+\end{lstlisting}
+
+Αντίθετα, όταν τερματίζεται το ίδιο το ενεργό κέλυφος (\texttt{wpid == pid}), 
+ο βρόχος αναμονής σπάει και η \texttt{init} επανεκκινεί άμεσα νέο shell τυπώνοντας \texttt{init: starting sh}.
+
+Αυτό φαίνεται στον εξωτερικό βρόχο της \texttt{init}: η \texttt{pid} κρατά το PID του
+shell που δημιούργησε, ενώ η \texttt{wpid} παίρνει το PID κάθε παιδιού που περισυλλέγει
+η \texttt{wait()}. 
+
+Για άλλο παιδί τυπώνεται \texttt{zombie!}, ενώ για το συγκεκριμένο
+shell ολοκληρώνεται ο εσωτερικός βρόχος και αρχίζει νέα επανάληψη του \texttt{for(;;)}:
+
+\begin{lstlisting}[language=C, caption={Δημιουργία shell και περισυλλογή παιδιών στο user/init.c}]
+  for(;;){
+    printf(1, "init: starting sh\n");
+    pid = fork();
+    if(pid < 0){
+      printf(1, "init: fork failed\n");
+      exit();
+    }
+    if(pid == 0){
+      exec("sh", argv);
+      printf(1, "init: exec sh failed\n");
+      exit();
+    }
+    while((wpid=wait()) >= 0 && wpid != pid)
+      printf(1, "zombie!\n");
+  }
 \end{lstlisting}
 
 \end{document}
