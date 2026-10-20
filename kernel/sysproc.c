@@ -7,6 +7,8 @@
 #include "proc.h"
 
 extern struct ptable ptable;
+extern int syscall_counts[];
+extern const int syscall_counts_len;
 
 int sys_fork(void)
 {
@@ -39,16 +41,14 @@ int sys_getpinfo(void)
 
   argptr(0, (void *)&pstat, sizeof(*pstat));
 
-  if (pstat == 0)
-  {
+  if (pstat == 0) {
     return -1;
   }
 
   acquire(&ptable.lock);
   struct proc *p;
   int i;
-  for (p = ptable.proc; p != &(ptable.proc[NPROC]); p++)
-  {
+  for (p = ptable.proc; p != &(ptable.proc[NPROC]); p++) {
     i = p - ptable.proc;
 
     /* if (p->state == UNUSED) { */
@@ -92,10 +92,8 @@ int sys_sleep(void)
     return -1;
   acquire(&tickslock);
   ticks0 = ticks;
-  while (ticks - ticks0 < n)
-  {
-    if (proc->killed)
-    {
+  while (ticks - ticks0 < n) {
+    if (proc->killed) {
       release(&tickslock);
       return -1;
     }
@@ -146,8 +144,7 @@ int sys_killrandom(void)
   acquire(&ptable.lock);
 
   // 1. Gather all killable processes
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     // Only pick processes that are alive
     if (p->state == UNUSED || p->state == ZOMBIE)
       continue;
@@ -160,14 +157,14 @@ int sys_killrandom(void)
   }
 
   // 2. If no killable process exists, safely return -1
-  if (count == 0)
-  {
+  if (count == 0) {
     release(&ptable.lock);
     return -1;
   }
 
   // 3. Pick a random candidate
-  // modulo count makes sure the idx is within range of how many processes we have
+  // modulo count makes sure the idx is within range of how many processes we
+  // have
   int chosen_idx = (int)(rand() % (unsigned int)count);
   struct proc *victim = candidates[chosen_idx];
 
@@ -183,4 +180,20 @@ int sys_killrandom(void)
 int sys_rand(void)
 {
   return (int)(rand() & 0x7FFFFFFF);
+}
+
+// Returns the number of times a system call has been executed since init
+int sys_getcount(void)
+{
+  int sc;
+
+  // Get the syscall number from the first argument
+  if (argint(0, &sc) < 0)
+    return -1;
+
+  // Check if the syscall number is valid
+  if (sc < 0 || sc >= syscall_counts_len)
+    return -1;
+
+  return syscall_counts[sc];
 }

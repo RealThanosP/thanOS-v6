@@ -49,11 +49,9 @@ int fetchstr(uintp addr, char **pp)
 
 #if X64
 // arguments passed in registers on x64
-static uintp
-fetcharg(int n)
+static uintp fetcharg(int n)
 {
-  switch (n)
-  {
+  switch (n) {
   case 0:
     return proc->tf->rdi;
   case 1:
@@ -181,21 +179,18 @@ static int (*syscalls[])(void) = {
 };
 
 int syscall_counts[NELEM(syscalls)] = {0};
+int const syscall_counts_len = NELEM(syscalls);
 
 void syscall(void)
 {
   int num;
 
   num = proc->tf->eax;
-  if (num > 0 && num < NELEM(syscalls) && syscalls[num])
-  {
+  if (num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     proc->tf->eax = syscalls[num]();
     syscall_counts[num]++; // Increment the system call that is run
-  }
-  else
-  {
-    cprintf("%d %s: unknown sys call %d\n",
-            proc->pid, proc->name, num);
+  } else {
+    cprintf("%d %s: unknown sys call %d\n", proc->pid, proc->name, num);
     proc->tf->eax = -1;
   }
 }
@@ -203,20 +198,4 @@ void syscall(void)
 int sys_settickets(void)
 {
   return -1;
-}
-
-// Returns the number of times a system call has been executed since init
-int sys_getcount(void)
-{
-  int sc;
-
-  // Get the syscall number from the first argument
-  if (argint(0, &sc) < 0)
-    return -1;
-
-  // Check if the syscall number is valid
-  if (sc < 0 || sc >= NELEM(syscalls))
-    return -1;
-
-  return syscall_counts[sc];
 }

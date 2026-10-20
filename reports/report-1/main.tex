@@ -555,12 +555,18 @@ Shutting down xv6... Goodbye!
 Μέσα στην κεντρική συνάρτηση \texttt{syscall(void)}, μετά την επιτυχή εκτέλεση της εκάστοτε κλήσης, αυξάνεται 
 ο αντίστοιχος μετρητής: \texttt{syscall\_counts[num]++}.
 
-\subsection*{2. Υλοποίηση \texttt{sys\_getcount} (\texttt{kernel/syscall.c})}
-Η συνάρτηση εξυπηρέτησης ανακτά το πρώτο όρισμα (\texttt{argint}), ελέγχει τα όρια και επιστρέφει τον μετρητή:
-\begin{lstlisting}[language=C, caption={Υλοποίηση sys\_getcount στο kernel/syscall.c}]
+\subsection*{2. Υλοποίηση \texttt{sys\_getcount} (\texttt{kernel/sysproc.c})}
+Ο handler ανακτά το πρώτο όρισμα (\texttt{argint}), ελέγχει τα όρια και επιστρέφει τον μετρητή:
+Ο πίνακας \texttt{syscall\_counts} και το μήκος του \texttt{syscall\_counts\_len} ορίζονται στο \texttt{kernel/syscall.c} 
+και είναι προσβάσιμα στο \texttt{kernel/sysproc.c} μέσω δηλώσεων \texttt{extern}.
+
+\begin{lstlisting}[language=C, caption={Υλοποίηση sys\_getcount στο kernel/sysproc.c}]
+extern int syscall_counts[];
+extern const int syscall_counts_len;
+
 int sys_getcount(void) {
   int sc;
-  if (argint(0, &sc) < 0 || sc < 0 || sc >= NELEM(syscalls)) return -1;
+  if (argint(0, &sc) < 0 || sc < 0 || sc >= syscall_counts_len) return -1;
   return syscall_counts[sc];
 }
 \end{lstlisting}
@@ -591,7 +597,7 @@ System call 1 execution count: 65
 Με όριο 64 διεργασιών και ήδη ενεργές τις init, shell και forktest, το forktest δημιουργεί 61 παιδιά και πραγματοποιεί μία επιπλέον αποτυχημένη κλήση fork(). 
 Ο καθολικός μετρητής περιλαμβάνει επίσης τη δημιουργία του shell από την init και την εκκίνηση των forktest και syscount από το shell. 
 Έτσι, σε καθαρή εκκίνηση χωρίς άλλες διεργασίες ή προηγούμενες κλήσεις fork(), προκύπτουν συνολικά 65 κλήσεις,  
-61 (από το fork test) και 4 (από τα fork που καλούν οι sh, forktest, syscount και init).
+61 (από το fork test) + 1 (αποτυχημένη) + 1 (της init) + 2 (του shell).
 
 
 % ==============================================================================
@@ -635,7 +641,6 @@ int sys_killrandom(void) {
   struct proc *candidates[NPROC], *p;
   int count = 0;
 
-  acquire(&ptable.lock);
   // 1. Συλλογή ζωντανών διεργασιών (εξαίρεση init και τρέχουσας)
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     if (p->state == UNUSED || p->state == ZOMBIE) continue;
@@ -643,13 +648,11 @@ int sys_killrandom(void) {
     candidates[count++] = p;
   }
   if (count == 0) {
-    release(&ptable.lock);
     return -1;
   }
   // 2. Τυχαία επιλογή υποψήφιας διεργασίας
   int chosen_idx = (int)(rand() % (unsigned int)count);
   struct proc *victim = candidates[chosen_idx];
-  release(&ptable.lock);
 
   // 3. Τερματισμός επιλεγμένης διεργασίας
   kill(victim->pid);
