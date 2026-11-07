@@ -35,6 +35,17 @@ int sys_kill(void)
   return kill(pid);
 }
 
+int sys_settickets(void)
+{
+  int n;
+  if (argint(0, &n) < 0 || n < 1)
+    return -1;
+  acquire(&ptable.lock);
+  proc->tickets = n;
+  release(&ptable.lock);
+  return 0;
+}
+
 int sys_getpinfo(void)
 {
   struct pstat *pstat;

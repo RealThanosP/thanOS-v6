@@ -27,8 +27,7 @@ void pinit(void)
 //  If found, change state to EMBRYO and initialize
 //  state required to run in the kernel.
 //  Otherwise return 0.
-static struct proc *
-allocproc(void)
+static struct proc *allocproc(void)
 {
   struct proc *p;
   char *sp;
@@ -44,11 +43,11 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->ticks = 0;
+  p->tickets = 1;
   release(&ptable.lock);
 
   // Allocate kernel stack.
-  if ((p->kstack = kalloc()) == 0)
-  {
+  if ((p->kstack = kalloc()) == 0) {
     p->state = UNUSED;
     return 0;
   }
@@ -82,7 +81,8 @@ void userinit(void)
   initproc = p;
   if ((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
-  inituvm(p->pgdir, _binary_out_initcode_start, (uintp)_binary_out_initcode_size);
+  inituvm(p->pgdir, _binary_out_initcode_start,
+          (uintp)_binary_out_initcode_size);
   p->sz = PGSIZE;
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
@@ -108,13 +108,10 @@ int growproc(int n)
   uint sz;
 
   sz = proc->sz;
-  if (n > 0)
-  {
+  if (n > 0) {
     if ((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
       return -1;
-  }
-  else if (n < 0)
-  {
+  } else if (n < 0) {
     if ((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0)
       return -1;
   }
@@ -136,8 +133,7 @@ int fork(void)
     return -1;
 
   // Copy process state from p.
-  if ((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0)
-  {
+  if ((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0) {
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
@@ -156,8 +152,11 @@ int fork(void)
   np->cwd = idup(proc->cwd);
 
   pid = np->pid;
-  np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+  acquire(&ptable.lock);
+  np->tickets = proc->tickets;
+  np->state = RUNNABLE;
+  release(&ptable.lock);
   return pid;
 }
 
@@ -173,10 +172,8 @@ void exit(void)
     panic("init exiting");
 
   // Close all open files.
-  for (fd = 0; fd < NOFILE; fd++)
-  {
-    if (proc->ofile[fd])
-    {
+  for (fd = 0; fd < NOFILE; fd++) {
+    if (proc->ofile[fd]) {
       fileclose(proc->ofile[fd]);
       proc->ofile[fd] = 0;
     }
@@ -184,6 +181,7 @@ void exit(void)
 
   iput(proc->cwd);
   proc->cwd = 0;
+
   proc->inuse = 0;
 
   acquire(&ptable.lock);
@@ -192,10 +190,8 @@ void exit(void)
   wakeup1(proc->parent);
 
   // Pass abandoned children to init.
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
-    if (p->parent == proc)
-    {
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->parent == proc) {
       p->parent = initproc;
       if (p->state == ZOMBIE)
         wakeup1(initproc);
@@ -216,17 +212,14 @@ int wait(void)
   int havekids, pid;
 
   acquire(&ptable.lock);
-  for (;;)
-  {
+  for (;;) {
     // Scan through table looking for zombie children.
     havekids = 0;
-    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    {
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
       if (p->parent != proc)
         continue;
       havekids = 1;
-      if (p->state == ZOMBIE)
-      {
+      if (p->state == ZOMBIE) {
         // Found one.
         pid = p->pid;
         kfree(p->kstack);
@@ -243,8 +236,7 @@ int wait(void)
     }
 
     // No point waiting if we don't have any children.
-    if (!havekids || proc->killed)
-    {
+    if (!havekids || proc->killed) {
       release(&ptable.lock);
       return -1;
     }
@@ -252,6 +244,20 @@ int wait(void)
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(proc, &ptable.lock); // DOC: wait-sleep
   }
+}
+
+// Draw from [0, total) even when the sum exceeds a 32-bit ticket count.
+static unsigned long long draw_ticket(unsigned long long total)
+{
+  unsigned long long mask = 0;
+  while (mask < total - 1)
+    mask = (mask << 1) | 1;
+
+  unsigned long long ticket;
+  do {
+    ticket = rand() & mask;
+  } while (ticket >= total);
+  return ticket;
 }
 
 // PAGEBREAK: 42
@@ -264,24 +270,30 @@ int wait(void)
 //       via swtch back to the scheduler.
 void scheduler(void)
 {
-  struct proc *p = 0;
+  struct proc *p;
 
-  for (;;)
-  {
-    // Enable interrupts on this processor.
+  for (;;) {
     sti();
-
-    // no runnable processes? (did we hit the end of the table last time?)
-    // if so, wait for irq before trying again.
-    if (p == &ptable.proc[NPROC])
-      hlt();
-
-    // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    unsigned long long total = 0;
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    {
+      if (p->state == RUNNABLE)
+        total += p->tickets;
+
+    if (total == 0) {
+      release(&ptable.lock);
+      hlt();
+      continue;
+    }
+
+    unsigned long long ticket = draw_ticket(total);
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
       if (p->state != RUNNABLE)
         continue;
+      if (ticket >= p->tickets) {
+        ticket -= p->tickets;
+        continue;
+      }
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -297,6 +309,7 @@ void scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       proc = 0;
+      break; // Draw again for the next dispatch.
     }
     release(&ptable.lock);
   }
@@ -338,8 +351,7 @@ void forkret(void)
   // Still holding ptable.lock from scheduler.
   release(&ptable.lock);
 
-  if (first)
-  {
+  if (first) {
     // Some initialization functions must be run in the context
     // of a regular process (e.g., they call sleep), and thus cannot
     // be run from main().
@@ -366,9 +378,8 @@ void sleep(void *chan, struct spinlock *lk)
   // guaranteed that we won't miss any wakeup
   // (wakeup runs with ptable.lock locked),
   // so it's okay to release lk.
-  if (lk != &ptable.lock)
-  {                        // DOC: sleeplock0
-    acquire(&ptable.lock); // DOC: sleeplock1
+  if (lk != &ptable.lock) { // DOC: sleeplock0
+    acquire(&ptable.lock);  // DOC: sleeplock1
     release(lk);
   }
 
@@ -381,8 +392,7 @@ void sleep(void *chan, struct spinlock *lk)
   proc->chan = 0;
 
   // Reacquire original lock.
-  if (lk != &ptable.lock)
-  { // DOC: sleeplock2
+  if (lk != &ptable.lock) { // DOC: sleeplock2
     release(&ptable.lock);
     acquire(lk);
   }
@@ -391,8 +401,7 @@ void sleep(void *chan, struct spinlock *lk)
 // PAGEBREAK!
 //  Wake up all processes sleeping on chan.
 //  The ptable lock must be held.
-static void
-wakeup1(void *chan)
+static void wakeup1(void *chan)
 {
   struct proc *p;
 
@@ -417,10 +426,8 @@ int kill(int pid)
   struct proc *p;
 
   acquire(&ptable.lock);
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
-    if (p->pid == pid)
-    {
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->pid == pid) {
       p->killed = 1;
       // Wake process from sleep if necessary.
       if (p->state == SLEEPING)
@@ -439,20 +446,15 @@ int kill(int pid)
 //  No lock to avoid wedging a stuck machine further.
 void procdump(void)
 {
-  static char *states[] = {
-      [UNUSED] "unused",
-      [EMBRYO] "embryo",
-      [SLEEPING] "sleep ",
-      [RUNNABLE] "runble",
-      [RUNNING] "run   ",
-      [ZOMBIE] "zombie"};
+  static char *states[] = {[UNUSED] "unused",   [EMBRYO] "embryo",
+                           [SLEEPING] "sleep ", [RUNNABLE] "runble",
+                           [RUNNING] "run   ",  [ZOMBIE] "zombie"};
   int i;
   struct proc *p;
   char *state;
   uintp pc[10];
 
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     if (p->state == UNUSED)
       continue;
     if (p->state >= 0 && p->state < NELEM(states) && states[p->state])
@@ -460,8 +462,7 @@ void procdump(void)
     else
       state = "???";
     cprintf("%d %s %s", p->pid, state, p->name);
-    if (p->state == SLEEPING)
-    {
+    if (p->state == SLEEPING) {
       getstackpcs((uintp *)p->context->ebp, pc);
       for (i = 0; i < 10 && pc[i] != 0; i++)
         cprintf(" %p", pc[i]);
@@ -472,15 +473,15 @@ void procdump(void)
   cprintf("\n\n");
 }
 
-static unsigned int rand_state = 123456789;
+static unsigned long long rand_state = 123456789;
 
-// Generates a 32-bit pseudo-random unsigned integer
-unsigned int rand(void)
+// Generates a 64-bit pseudo-random unsigned integer.
+unsigned long long rand(void)
 {
-  unsigned int x = rand_state;
+  unsigned long long x = rand_state;
   x ^= x << 13;
-  x ^= x >> 17;
-  x ^= x << 5;
+  x ^= x >> 7;
+  x ^= x << 17;
   rand_state = x;
   return x;
 }

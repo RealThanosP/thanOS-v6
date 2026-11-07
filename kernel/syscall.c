@@ -194,8 +194,3 @@ void syscall(void)
     proc->tf->eax = -1;
   }
 }
-
-int sys_settickets(void)
-{
-  return -1;
-}
